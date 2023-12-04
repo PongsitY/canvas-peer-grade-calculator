@@ -149,6 +149,13 @@
         align-items: center;
     }
 
+    #unauthorized-view {
+        padding: 30px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
 </style>
 @endsection
 
@@ -369,7 +376,11 @@
             </div>
         </div>
     @else
-        <div id="not-completed-view">Peer Review for this Assignment has not been completed. Please select a different assignment to view.</div>
+        @if ($authorized)
+            <div id="not-completed-view">Peer Review for this Assignment has not been completed. Please select a different assignment to view.</div>
+        @else
+            <div id="unauthorized-view">You do not have permission to access this assignment.</div>
+        @endif
     @endif
 
     <script>

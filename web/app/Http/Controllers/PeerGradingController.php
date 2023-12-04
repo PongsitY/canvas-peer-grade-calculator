@@ -7,8 +7,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use League\Csv\Writer;
+use League\Csv\Reader;
 use LonghornOpen\CanvasApi\CanvasApiClient;
 use function collect;
+use GuzzleHttp\Client;
 
 class PeerGradingController extends Controller
 {
@@ -26,6 +28,7 @@ class PeerGradingController extends Controller
         usort($courses, function ($c1, $c2) {
             return strcasecmp($c2->created_at, $c1->created_at);
         });
+        $this->totalCourses = $courses;
         return view(
             'index',
             [
@@ -54,6 +57,7 @@ class PeerGradingController extends Controller
 
     public function courseHome($course_id)
     {
+        // echo strval(Session::get("oauth2_access_token"));
         $valid_assignments = $this->getAssignments($course_id);
         return view(
             'course_home',
@@ -81,6 +85,8 @@ class PeerGradingController extends Controller
         $peer_review_scores = $this->get_peer_review_scores_from_rubric($canvasApi, $course_id, $rubric_id);
         $table_data = $this->generate_table_data($student_list, $peer_reviews, $peer_review_scores);
         $csv = Writer::createFromString();
+        $csv->setOutputBOM(Reader::BOM_UTF8);
+        // CharsetConverter::addTo($csv, 'ISO-8859-15', 'UTF-16');
         $csv_header = ["Student Name", "Grader Name", "Grade Assigned", "Grade Average", "Submission Comments"];
         if (count($table_data) !== 0) {
             $num_criterias = count($table_data[0][4]);
@@ -116,6 +122,8 @@ class PeerGradingController extends Controller
         $peer_review_scores = $this->get_peer_review_scores_from_rubric($canvasApi, $course_id, $rubric_id);
         $table_data = $this->generate_table_data($student_list, $peer_reviews, $peer_review_scores);
         $csv = Writer::createFromString();
+        $csv->setOutputBOM(Reader::BOM_UTF8);
+        // CharsetConverter::addTo($csv, 'ISO-8859-15', 'UTF-16');
         $csv_header = ["Student", "ID", "SIS User ID", $assignment_name . "(" . $assignment_id . ")"];
         $csv->insertOne($csv_header);
         $avg_grades = collect();
@@ -153,10 +161,12 @@ class PeerGradingController extends Controller
         $valid_assignments = $this->getAssignments($course_id);
 
         // peer reviews has not been completed
-        if (count($peer_review_scores["score"]) == 0) {
+        // echo("<script>console.log('peer_review_scores: " . json_encode($peer_review_scores) . "' );</script>");
+        if ($peer_review_scores == [] || count($peer_review_scores["score"]) == 0) {
             return view(
                 'assignment',
                 [
+                    'authorized' => $peer_review_scores != [],
                     'peer_review_completed' => false,
                     'assignments' => $valid_assignments,
                     'assignment_id' => $assignment_id,
@@ -248,11 +258,16 @@ class PeerGradingController extends Controller
         $submissions = $canvasApi->get(
             '/courses/' . $course_id . '/assignments/' . $assignment_id . '/submissions?include=submission_comments&per_page=1000'
         );
+        // echo("<script>console.log('peer_reviews: " . json_encode($data) . "' );</script>");
+        // echo("<script>console.log('submissions: " . json_encode($submissions) . "' );</script>");
         $peer_reviews = [];
         $submission_scores = [];
         $submission_comments = [];
         foreach ($submissions as $submission) {
             $submission_scores[$submission->id] = $submission->score;
+            if (!isset($submission->submission_comments)) {
+                continue;
+            }
             foreach ($submission->submission_comments as $submission_comment) {
                 $author_id = $submission_comment->author_id;
                 if (!array_key_exists($submission->user_id, $submission_comments)) {
@@ -284,16 +299,21 @@ class PeerGradingController extends Controller
                 continue;
             }
         }
+        // echo("<script>console.log('peer_reviews_proceed: " . json_encode($data) . "' );</script>");
         return $peer_reviews;
     }
 
 
     protected function get_peer_review_scores_from_rubric($canvasApi, $course_id, $rubric_id)
     {
-        $data = $canvasApi->get(
-            '/courses/' . $course_id . '/rubrics/' . $rubric_id . '?include=peer_assessments&style=full&per_page=1000'
-        );
-
+        // $data = $canvasApi->get(
+        //     '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=1000'
+        // );
+        if (!$this->isAllowed($canvasApi, $course_id)) {
+            return [];
+        }
+        $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=1000');
+        // echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
         if ($data !== null) {
             $assessments = $data->assessments;
@@ -465,5 +485,71 @@ class PeerGradingController extends Controller
 </cartridge_basiclti_link>
 EOXML)
             ->header('Content-Type', 'text/xml');
+    }
+
+    // --------------------- Modified functions ---------------------------
+    protected function adminRequest($method, $endpoint, $data = NULL)
+    {
+        $client = new Client();
+        $reqUrl = env("CANVAS_URL") . '/api/v1' . $endpoint;
+        $adminToken = env("ADMIN_TOKEN");
+        $headers = [
+            'headers' => [
+                'Authorization' => "Bearer " . $adminToken
+            ]
+        ];
+        $result = [];
+        switch (strtoupper($method)) {
+            case 'GET':
+                $raw_response = $client->get($reqUrl, $headers);
+                $result = json_decode($raw_response->getBody()->getContents());
+                break;
+            
+            case 'PUT':
+                $raw_response = $client->put($reqUrl, $headers);
+                $result = json_decode($raw_response->getBody()->getContents());
+                break;
+            
+            default:
+                # code...
+                break;
+        }
+        return $result;
+    }
+
+    protected function isAllowed($canvasApi, $course_id) 
+    {
+        try {
+            $res = FALSE;
+            $teacher_courses = $canvasApi->get('/users/self/courses?enrollment_type=teacher&enrollment_state=active?per_page=100');
+            $ta_courses = $canvasApi->get('/users/self/courses?enrollment_type=ta&enrollment_state=active?per_page=100');
+            $totalCourses = array_merge($teacher_courses, $ta_courses);
+            foreach ($totalCourses as $row) {
+                if ($row->id == $course_id) {
+                    $res = TRUE;
+                    break;
+                }
+            }
+            return $res;
+        }
+        catch(\Exception $e) {
+            return FALSE;
+        }
+    }
+
+    protected function isAdmin($canvasApi)
+    {
+        try {
+            $data = $canvasApi->get("/accounts/self/admins/self");
+            if ($data == [] || $data[1]->role != "AccountAdmin") {
+                return FALSE;
+            }
+            // This user is admin
+            return TRUE;
+        }
+        catch(\Exception $e) {
+            echo $e;
+            return FALSE;
+        }
     }
 }

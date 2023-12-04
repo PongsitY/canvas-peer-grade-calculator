@@ -1,0 +1,14 @@
+version: '0.1'
+services:
+  web:
+    # restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: canvas-peer-reviews-calculator-container
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+    working_dir: /var/www/html
+    command: php artisan serve --host=0.0.0.0 --port=8000
