@@ -562,20 +562,35 @@ EOXML)
         }
     }
 
-    protected function getNextPageUrl(string $linkHeader): ?string {
-        if (empty($linkHeader)) {
-            return null;
-        }
+    function getNextUrl($header) {
+        $links = [];
 
-        // Split header by comma because multiple links may exist
-        $links = explode(',', $linkHeader);
+        $parts = explode(',', $header);
+        foreach ($parts as $part) {
+            $section = explode(';', $part);
 
-        foreach ($links as $link) {
-            if (preg_match('/<([^>]+)>;\\s*rel="next"/', trim($link), $matches)) {
-                return $matches[1];
+            if (count($section) !== 2) {
+                continue;
             }
+
+            // Extract URL between < >
+            if (preg_match('/<(.*)>/', trim($section[0]), $matches)) {
+                $url = trim($matches[1]);
+            } else {
+                continue;
+            }
+
+            // Extract rel="name"
+            if (preg_match('/rel="(.*)"/', trim($section[1]), $matches)) {
+                $name = trim($matches[1]);
+            } else {
+                continue;
+            }
+
+            $links[$name] = $url;
         }
 
-        return null;
+        return $links["next"] ?? null;
     }
+
 }
