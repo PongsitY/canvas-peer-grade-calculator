@@ -40,8 +40,9 @@ class PeerGradingController extends Controller
 
     protected function getAssignments($course_id)
     {
-        $canvasApi = $this->getCanvasApi();
-        $assignments = $canvasApi->get('/courses/' . $course_id . '/assignments?per_page=200');
+        // $canvasApi = $this->getCanvasApi();
+        // $assignments = $canvasApi->get('/courses/' . $course_id . '/assignments?per_page=200');
+        $assignments = $this->adminRequest('GET', '/courses/' . $course_id . '/assignments?per_page=100');
         $valid_assignments = [];
         foreach ($assignments as $assignment) {
             if (!$assignment->published || !$assignment->peer_reviews) {
@@ -222,7 +223,8 @@ class PeerGradingController extends Controller
 
     protected function get_assignment_info($canvasApi, $course_id, $assignment_id)
     {
-        $assignments = $canvasApi->get('/courses/' . $course_id . '/assignments/' . $assignment_id . '?per_page=1000');
+        // $assignments = $canvasApi->get('/courses/' . $course_id . '/assignments/' . $assignment_id . '?per_page=1000');
+        $assignments = $this->adminRequest('GET', '/courses/' . $course_id . '/assignments/' . $assignment_id . '?per_page=100');
         $rubric_id = null;
         if (isset($assignments->rubric_settings)) {
             $rubric_id = $assignments->rubric_settings->id;
@@ -235,7 +237,7 @@ class PeerGradingController extends Controller
 
     protected function get_student_list($canvasApi, $course_id)
     {
-        $students = $this->adminRequest('GET', '/courses/' . $course_id . '/students?per_page=1000');
+        $students = $this->adminRequest('GET', '/courses/' . $course_id . '/students?per_page=100');
         $student_list = [];
         foreach ($students as $student) {
             if (!isset($student->login_id)) {
