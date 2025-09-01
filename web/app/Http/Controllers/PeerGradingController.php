@@ -222,7 +222,7 @@ class PeerGradingController extends Controller
 
     protected function get_assignment_info($canvasApi, $course_id, $assignment_id)
     {
-        $assignments = $canvasApi->get('/courses/' . $course_id . '/assignments/' . $assignment_id . '?per_page=200');
+        $assignments = $canvasApi->get('/courses/' . $course_id . '/assignments/' . $assignment_id . '?per_page=1000');
         $rubric_id = null;
         if (isset($assignments->rubric_settings)) {
             $rubric_id = $assignments->rubric_settings->id;
@@ -235,7 +235,7 @@ class PeerGradingController extends Controller
 
     protected function get_student_list($canvasApi, $course_id)
     {
-        $students = $canvasApi->get('/courses/' . $course_id . '/students?per_page=1000');
+        $students = $this->adminRequest('GET', '/courses/' . $course_id . '/students?per_page=1000');
         $student_list = [];
         foreach ($students as $student) {
             if (!isset($student->login_id)) {
@@ -251,12 +251,12 @@ class PeerGradingController extends Controller
 
     protected function get_peer_reviews($canvasApi, $course_id, $assignment_id)
     {
-        ini_set('memory_limit', '1024M');
-        $data = $canvasApi->get(
-            '/courses/' . $course_id . '/assignments/' . $assignment_id . '/peer_reviews?per_page=1000'
+        // ini_set('memory_limit', '1024M');
+        $data = $this->adminRequest('GET',
+            '/courses/' . $course_id . '/assignments/' . $assignment_id . '/peer_reviews?per_page=100'
         );
-        $submissions = $canvasApi->get(
-            '/courses/' . $course_id . '/assignments/' . $assignment_id . '/submissions?include=submission_comments&per_page=1000'
+        $submissions = $this->adminRequest('GET',
+            '/courses/' . $course_id . '/assignments/' . $assignment_id . '/submissions?include=submission_comments&per_page=100'
         );
         // echo("<script>console.log('peer_reviews: " . json_encode($data) . "' );</script>");
         // echo("<script>console.log('submissions: " . json_encode($submissions) . "' );</script>");
@@ -312,16 +312,7 @@ class PeerGradingController extends Controller
         if (!$this->isAllowed($canvasApi, $course_id)) {
             return [];
         }
-        $data = [];
-        $nextPageLink = '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=100';
-        do {
-            $result = $this->adminRequest('GET', $nextPageLink);
-            if ($result !== null) {
-                $data = $result;
-            }
-            // Get next page link
-            $nextPageLink = $this->getNextPageLink($result);
-        } while ($nextPageLink);
+        $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=100');
 
         // echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
@@ -512,6 +503,14 @@ EOXML)
         switch (strtoupper($method)) {
             case 'GET':
                 $raw_response = $client->get($reqUrl, $headers);
+                // Check if next page link
+                $nextPageLink = $this->getNextPageUrl($raw_response->getHeader('Link'));
+                while ($nextPageLink) {
+                    $additional_response = $client->get($nextPageLink, $headers);
+                    $additional_data = json_decode($additional_response->getBody()->getContents());
+                    $result = array_merge($result, $additional_data);
+                    $nextPageLink = $this->getNextPageUrl($additional_response->getHeader('Link'));
+                }
                 $result = json_decode($raw_response->getBody()->getContents());
                 break;
             
