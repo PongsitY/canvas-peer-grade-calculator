@@ -312,10 +312,20 @@ class PeerGradingController extends Controller
         if (!$this->isAllowed($canvasApi, $course_id)) {
             return [];
         }
-        $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=1000');
+        $data = [];
+        $nextPageLink = '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=100';
+        do {
+            $result = $this->adminRequest('GET', $nextPageLink);
+            if ($result !== null) {
+                $data = $result;
+            }
+            // Get next page link
+            $nextPageLink = $this->getNextPageLink($result);
+        } while ($nextPageLink);
+
         // echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
-        if ($data !== null) {
+        if (count($data) > 0) {
             $assessments = $data->assessments;
             $peer_review_scores['score'] = [];
             foreach ($assessments as $assessment) {
@@ -551,5 +561,22 @@ EOXML)
             echo $e;
             return FALSE;
         }
+    }
+
+    protected function getNextPageUrl(string $linkHeader): ?string {
+        if (empty($linkHeader)) {
+            return null;
+        }
+
+        // Split header by comma because multiple links may exist
+        $links = explode(',', $linkHeader);
+
+        foreach ($links as $link) {
+            if (preg_match('/<([^>]+)>;\\s*rel="next"/', trim($link), $matches)) {
+                return $matches[1];
+            }
+        }
+
+        return null;
     }
 }
