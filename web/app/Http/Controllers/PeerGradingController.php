@@ -492,7 +492,11 @@ EOXML)
     protected function adminRequest($method, $endpoint, $data = NULL)
     {
         $client = new Client();
-        $reqUrl = env("CANVAS_URL") . '/api/v1' . $endpoint;
+        $reqUrl = $endpoint;
+        if (!str_contains($endpoint, 'http')) {
+            $reqUrl = env("CANVAS_URL") . '/api/v1' . $endpoint;
+        }
+        
         $adminToken = env("ADMIN_TOKEN");
         $headers = [
             'headers' => [
@@ -502,16 +506,12 @@ EOXML)
         $result = [];
         switch (strtoupper($method)) {
             case 'GET':
-                $raw_response = $client->get($reqUrl, $headers);
-                // Check if next page link
-                $nextPageLink = $this->getNextPageUrl($raw_response->getHeader('Link'));
-                while ($nextPageLink) {
-                    $additional_response = $client->get($nextPageLink, $headers);
-                    $additional_data = json_decode($additional_response->getBody()->getContents());
-                    $result = array_merge($result, $additional_data);
-                    $nextPageLink = $this->getNextPageUrl($additional_response->getHeader('Link'));
-                }
-                $result = json_decode($raw_response->getBody()->getContents());
+                $nextUrl = $reqUrl;
+                do {
+                    $tmp = $client->get($nextUrl, $headers);
+                    $result = array_merge($result, json_decode($tmp->getBody()->getContents()));
+                    $nextUrl = $this->getNextUrl($tmp->getHeader('Link'));
+                } while ($nextUrl);
                 break;
             
             case 'PUT':
@@ -562,14 +562,23 @@ EOXML)
         }
     }
 
-    function getNextUrl($header) {
+    function getNextUrl($linkHeader) {
+        // Handle case when $linkHeader is an array (e.g., from Guzzle getHeader)
+        if (is_array($linkHeader)) {
+            $linkHeader = $linkHeader[0] ?? '';
+        }
+
+        if (empty($linkHeader)) {
+            return null;
+        }
+
         $links = [];
 
-        $parts = explode(',', $header);
+        $parts = explode(',', $linkHeader);
         foreach ($parts as $part) {
             $section = explode(';', $part);
 
-            if (count($section) !== 2) {
+            if (count($section) < 2) {
                 continue;
             }
 
@@ -580,7 +589,7 @@ EOXML)
                 continue;
             }
 
-            // Extract rel="name"
+            // Extract rel="..."
             if (preg_match('/rel="(.*)"/', trim($section[1]), $matches)) {
                 $name = trim($matches[1]);
             } else {
@@ -590,7 +599,6 @@ EOXML)
             $links[$name] = $url;
         }
 
-        return $links["next"] ?? null;
+        return $links['next'] ?? null;
     }
-
 }
