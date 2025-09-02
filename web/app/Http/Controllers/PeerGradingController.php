@@ -519,7 +519,7 @@ EOXML)
                         break;
                     }
                     $result = array_merge($result, $tmp);
-                    $nextUrl = $this->getNextUrl($tmp->getHeader('Link'));
+                    $nextUrl = $this->getNextUrl($raw_response->getHeader('Link'));
                 } while ($nextUrl);
                 break;
             
