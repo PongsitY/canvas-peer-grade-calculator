@@ -317,7 +317,7 @@ class PeerGradingController extends Controller
         );
         $data = $result->data;
         $peer_review_scores = [];
-        if (count($data) > 0) {
+        if ($data) {
             $assessments = $data->assessments;
             $peer_review_scores['score'] = [];
             foreach ($assessments as $assessment) {
