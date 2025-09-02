@@ -237,7 +237,7 @@ class PeerGradingController extends Controller
 
     protected function get_student_list($canvasApi, $course_id)
     {
-        $students = $this->adminRequest('GET', '/courses/' . $course_id . '/students?per_page=100');
+        $students = $this->adminRequest('GET', '/courses/' . $course_id . '/users?per_page=100&enrollment_role_id=3');
         $student_list = [];
         foreach ($students as $student) {
             if (!isset($student->login_id)) {
