@@ -318,7 +318,7 @@ class PeerGradingController extends Controller
 
         // echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
-        if (count($data) > 0) {
+        if (is_array($data) && count($data) > 0) {
             $assessments = $data->assessments;
             $peer_review_scores['score'] = [];
             foreach ($assessments as $assessment) {
@@ -337,6 +337,8 @@ class PeerGradingController extends Controller
                 $peer_review_scores['total'] = $data->points_possible;
                 $peer_review_scores['comments'][$key] = $comments;
             }
+        } else {
+            echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         }
         return $peer_review_scores;
     }
