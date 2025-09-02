@@ -324,13 +324,13 @@ class PeerGradingController extends Controller
                 $assessor_id = $assessment->assessor_id;
                 $key = $asset_id . $assessor_id;
                 $score = $assessment->score;
-                $comments = [];
-                $comment_data = $assessment->data;
-                foreach ($comment_data as $comment) {
-                    if ($comment->comments != "") {
-                        $comments[] = $comment->comments;
-                    }
-                }
+                $comments = $assessment->comments;
+                // $comment_data = $assessment->data;
+                // foreach ($comment_data as $comment) {
+                //     if ($comment->comments != "") {
+                //         $comments[] = $comment->comments;
+                //     }
+                // }
                 $peer_review_scores['score'][$key] = $score;
                 $peer_review_scores['total'] = $data->points_possible;
                 $peer_review_scores['comments'][$key] = $comments;
