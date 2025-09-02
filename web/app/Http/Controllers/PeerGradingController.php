@@ -339,6 +339,7 @@ class PeerGradingController extends Controller
         } else {
             echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         }
+        echo("<script>console.log('peer_review_scores: " . json_encode($peer_review_scores) . "' );</script>");
         return $peer_review_scores;
     }
 
