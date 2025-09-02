@@ -510,8 +510,15 @@ EOXML)
             case 'GET':
                 $nextUrl = $reqUrl;
                 do {
-                    $tmp = $client->get($nextUrl, $headers);
-                    $result = array_merge($result, json_decode($tmp->getBody()->getContents()));
+                    $raw_response = $client->get($nextUrl, $headers);
+                    $tmp = json_decode($raw_response->getBody()->getContents());
+                    if (!is_array($tmp)) {
+                        if ($result == []) {
+                            $result = $tmp;
+                        }
+                        break;
+                    }
+                    $result = array_merge($result, json_decode());
                     $nextUrl = $this->getNextUrl($tmp->getHeader('Link'));
                 } while ($nextUrl);
                 break;
