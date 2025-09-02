@@ -314,7 +314,7 @@ class PeerGradingController extends Controller
         if (!$this->isAllowed($canvasApi, $course_id)) {
             return [];
         }
-        $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=100');
+        $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=100');
 
         // echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
