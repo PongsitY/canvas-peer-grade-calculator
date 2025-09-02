@@ -313,7 +313,7 @@ class PeerGradingController extends Controller
         }
         // $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=100');
         $data = $canvasApi->get(
-            '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=1000'
+            '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&per_page=1000'
         );
 
         echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
