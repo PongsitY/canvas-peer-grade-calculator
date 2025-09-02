@@ -315,10 +315,8 @@ class PeerGradingController extends Controller
         $data = $canvasApi->get(
             '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&per_page=1000'
         );
-
-        echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
-        if (is_array($data) && count($data) > 0) {
+        if (count($data) > 0) {
             $assessments = $data->assessments;
             $peer_review_scores['score'] = [];
             foreach ($assessments as $assessment) {
