@@ -308,15 +308,15 @@ class PeerGradingController extends Controller
 
     protected function get_peer_review_scores_from_rubric($canvasApi, $course_id, $rubric_id)
     {
-        // $data = $canvasApi->get(
-        //     '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=full&per_page=1000'
-        // );
         if (!$this->isAllowed($canvasApi, $course_id)) {
             return [];
         }
-        $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=100');
+        // $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=100');
+        $data = $canvasApi->get(
+            '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=1000'
+        );
 
-        // echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
+        echo("<script>console.log('rubric_data: " . json_encode($data) . "' );</script>");
         $peer_review_scores = [];
         if (is_array($data) && count($data) > 0) {
             $assessments = $data->assessments;
