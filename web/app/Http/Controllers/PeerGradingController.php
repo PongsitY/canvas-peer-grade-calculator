@@ -253,7 +253,7 @@ class PeerGradingController extends Controller
 
     protected function get_peer_reviews($canvasApi, $course_id, $assignment_id)
     {
-        // ini_set('memory_limit', '1024M');
+        ini_set('memory_limit', '1024M');
         $data = $this->adminRequest('GET',
             '/courses/' . $course_id . '/assignments/' . $assignment_id . '/peer_reviews?per_page=100'
         );
@@ -308,6 +308,7 @@ class PeerGradingController extends Controller
 
     protected function get_peer_review_scores_from_rubric($canvasApi, $course_id, $rubric_id)
     {
+        ini_set('memory_limit', '1024M');
         if (!$this->isAllowed($canvasApi, $course_id)) {
             return [];
         }
