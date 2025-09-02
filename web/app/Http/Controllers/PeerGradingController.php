@@ -312,9 +312,10 @@ class PeerGradingController extends Controller
             return [];
         }
         // $data = $this->adminRequest('GET', '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&style=comments_only&per_page=100');
-        $data = $canvasApi->get(
+        $result = $canvasApi->get(
             '/courses/' . $course_id . '/rubrics/' . strval($rubric_id) . '?include[]=peer_assessments&per_page=1000'
         );
+        $data = $result->data;
         $peer_review_scores = [];
         if (count($data) > 0) {
             $assessments = $data->assessments;
