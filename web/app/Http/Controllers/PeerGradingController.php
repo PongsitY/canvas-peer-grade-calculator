@@ -518,7 +518,7 @@ EOXML)
                         }
                         break;
                     }
-                    $result = array_merge($result, json_decode());
+                    $result = array_merge($result, tmp);
                     $nextUrl = $this->getNextUrl($tmp->getHeader('Link'));
                 } while ($nextUrl);
                 break;
